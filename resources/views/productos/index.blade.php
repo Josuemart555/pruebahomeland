@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title_page',__('Productos'))
+@include('layouts.plugins.bootstrap_fileinput')
 
 @section('content')
 
@@ -42,28 +43,36 @@
                 <div class="modal-body">
                     <div class="form-row">
                         <div class="form-group col-sm-6">
-                            {!! Form::label('codigo', 'Codigo:') !!}
-                            {!! Form::text('codigo', null, ['class' => 'form-control']) !!}
+                            <div class="form-group col-sm-12">
+                                {!! Form::label('name', 'Foto Producto:') !!}
+                                <input type="file" class="form-control" accept="image/png, image/jpeg, image/jpg, image/gif" id="foto_producto" @change="onSelectFile" >
+                            </div>
                         </div>
                         <div class="form-group col-sm-6">
-                            {!! Form::label('nombre', 'Nombre:') !!}
-                            {!! Form::text('nombre', null, ['class' => 'form-control']) !!}
-                        </div>
-                        <div class="form-group col-sm-6">
-                            {!! Form::label('cantidad', 'Cantidad:') !!}
-                            {!! Form::number('cantidad', null, ['class' => 'form-control']) !!}
-                        </div>
-                        <div class="form-group col-sm-6">
-                            {!! Form::label('precio', 'Precio:') !!}
-                            {!! Form::text('precio', null, ['class' => 'form-control']) !!}
+                            <div class="form-group col-sm-12">
+                                {!! Form::label('codigo', 'Codigo:') !!}
+                                <input type="text" class="form-control" v-model="editedItem.codigo" onkeypress="return checkCodigo(event)">
+                            </div>
+                            <div class="form-group col-sm-12">
+                                {!! Form::label('nombre', 'Nombre:') !!}
+                                <input type="text" class="form-control" v-model="editedItem.nombre" onkeypress="return checkNombre(event)">
+                            </div>
+                            <div class="form-group col-sm-12">
+                                {!! Form::label('cantidad', 'Cantidad:') !!}
+                                {!! Form::number('cantidad', null, ['class' => 'form-control', 'v-model' => 'editedItem.cantidad']) !!}
+                            </div>
+                            <div class="form-group col-sm-12">
+                                {!! Form::label('precio', 'Precio:') !!}
+                                {!! Form::text('precio', null, ['class' => 'form-control', 'v-model' => 'editedItem.precio']) !!}
+                            </div>
                         </div>
                         <div class="form-group col-sm-6">
                             {!! Form::label('fecha_ingresa', 'Fecha Ingresa:') !!}
-                            <input type="date" class="form-control" name="fecha_ingresa" >
+                            <input type="date" class="form-control" name="fecha_ingresa" id="fecha_ingresa" onchange="validarFechaIngresoMayorVencimiento()" v-model="editedItem.fecha_ingresa" >
                         </div>
                         <div class="form-group col-sm-6">
                             {!! Form::label('fehca_vencimiento', 'Fecha Vencimiento:') !!}
-                            <input type="date" class="form-control" name="fehca_vencimiento" >
+                            <input type="date" class="form-control" name="fehca_vencimiento" id="fehca_vencimiento" onchange="validarFechaIngresoMayorVencimiento()" v-model="editedItem.fehca_vencimiento" >
                         </div>
                     </div>
                 </div>
@@ -71,7 +80,7 @@
                     <button type="button" class="btn btn-outline-secondary " @click="cerrarModal()">
                         {{__('Cancelar')}}
                     </button>
-                    <button type="button" class="btn btn-outline-success " >
+                    <button type="button" class="btn btn-outline-success " @click="guardarProducto()" >
                         {{__('Guardar')}}
                     </button>
                 </div>
@@ -97,27 +106,112 @@
 
 @push('scripts')
     <script>
+
+        $(document).ready(function() {
+
+            // $("#fecha_ingresa").change( function(){
+            //     s= $("#fecha_ingresa").val();
+            //     console.log(s)
+            //     var bits = s.split('/');
+            //     var d = new Date(bits[2] + '/' + bits[0] + '/' + bits[1]);
+            //     alert(d);
+            // });
+
+            // $('#fecha_ingresa').change(function() {
+            //     s= $("#fecha_ingresa").val();
+            //     var bits = s.split('-');
+            //     console.log(bits)
+            //     var d = new Date(bits[1] + '/' + bits[2] + '/' + bits[0]);
+            //     console.log(d);
+            //     if (d == 'Invalid Date') {
+            //         iziTw('La fehca ingresa es invalida!!!');
+            //         Swal.close();
+            //         return;
+            //     }
+            // });
+
+        });
+
+        function checkCodigo(e) {
+            tecla = (document.all) ? e.keyCode : e.which;
+
+            //Tecla de retroceso para borrar, siempre la permite
+            if (tecla == 8) {
+                return true;
+            }
+
+            // Patrón de entrada, en este caso solo acepta numeros y letras
+            patron = /[A-Za-z0-9]/;
+            tecla_final = String.fromCharCode(tecla);
+            return patron.test(tecla_final);
+        }
+
+        function checkNombre(e) {
+            tecla = (document.all) ? e.keyCode : e.which;
+
+            //Tecla de retroceso para borrar, siempre la permite
+            if (tecla == 8) {
+                return true;
+            }
+
+            // Patrón de entrada, en este caso solo acepta letras
+            patron = /^[a-zA-Z]+$/;
+            tecla_final = String.fromCharCode(tecla);
+            return patron.test(tecla_final);
+        }
+
+        function validarFechaIngresoMayorVencimiento() {
+
+            if (validarFormatoFecha($('#fecha_ingresa').val()) == 'Invalid Date') {
+                iziTw('La fehca ingresa es invalida!!!');
+                Swal.close();
+                return;
+            }
+
+            if ($('#fecha_ingresa').val() && $('#fehca_vencimiento').val()) {
+                if(Date.parse($('#fecha_ingresa').val()) > Date.parse($('#fehca_vencimiento').val())){
+                    iziTw('La fehca ingresa no puede ser mayor a la vencimiento!!!');
+                    return;
+                }
+            }
+        }
+
+        function validarFormatoFecha(campo) {
+            const bits = campo.split('-');
+            const d = new Date(bits[1] + '/' + bits[2] + '/' + bits[0]);
+            return d;
+        }
+
         const app = new Vue({
             el: '#vmProducto',
             created() {
                 this.getData();
             },
             data: {
-                user : [],
+                productosLts : [],
+
+                editedItem: {
+                    id : 0,
+                },
+
+                defaultItem: {
+                    id : 0,
+                },
+
             },
             methods: {
                 async getData(){
-                    this.user= [];
-                    let url = "{{route("api.users.show",auth()->user()->id)}}";
+                    this.productosLts= [];
 
                     try {
-                        let res = await axios.get(url);
 
-                        this.user = res.data.data;
+                        var res = await axios.get(route('api.productos.index'));
+
+                        this.productosLts = res.data.data;
 
                         logI(res);
 
-                    }catch (e) {
+                    } catch (e) {
                         if(e.response.data){
                             logI(e.response.data);
                         }else{
@@ -127,65 +221,101 @@
                     }
                 },
                 newProducto(){
-                    $("#modal-producto").modal('show');
+                    setTimeout(() => {
+                        this.editedItem = Object.assign({}, this.defaultItem);
+                        this.inicializarFileInput(null, 'clear');
+                        $("#modal-producto").modal('show');
+                    }, 300);
                 },
                 cerrarModal() {
-                    $("#modal-producto").modal('hide');
+                    setTimeout(() => {
+                        this.editedItem = Object.assign({}, this.defaultItem);
+                        // this.inicializarFileInput(null, 'clear');
+                        $("#modal-producto").modal('hide');
+                    }, 300);
                 },
                 editShortcut(){
-                    $("#modalEditShortCuts").modal('show');
+                    $("#modal-producto").modal('show');
                 },
-                async addShortcut(option){
-                    let url = "{{route("api.users.add_shortcut",auth()->user()->id)}}";
+                onSelectFile(e){
 
-                    url = url+"?option="+option.id;
+                    this.editedItem.foto_producto = e.target.files[0];
+
+                },
+                inicializarFileInput(urlInitPre, metodo) {
+
+                    $("#foto_producto").fileinput(metodo).fileinput({
+                        language: "es",
+                        initialPreview: urlInitPre,
+                        dropZoneEnabled: true,
+                        maxFileCount: 1,
+                        maxFileSize: 1500,
+                        showUpload: false,
+                        initialPreviewAsData: true,
+                        showBrowse: true,
+                        showRemove: true,
+                        theme: "fa",
+                    });
+
+                },
+                async guardarProducto() {
+
+                    Swal.fire({
+                        title: 'Espera por favor...',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                        timerProgressBar: true,
+                    });
+                    Swal.showLoading();
+
+                    const data = this.editedItem;
+
+                    console.log(data)
+
+                    const formData = new FormData();
+
+                    Object.entries(data).map(([campo, valor], i) => {
+                        if (valor) {
+                            formData.append(campo, valor);
+                        }
+                    });
+
+                    const config = {
+                        headers: {'content-type': 'multipart/form-data'}
+                    }
 
                     try {
-                        let res = await axios.get(url);
 
-                        this.user = res.data.data;
+                        if(this.editedItem.id === 0){
 
-                        this.getData();
-                        iziTs(res.data.message);
-                        logI(res);
+                            let productoEncontrado = this.productosLts.find(obj => obj.codigo == this.editedItem.codigo);
 
-                    }catch (e) {
-                        if(e.response.data){
-                            logI(e.response.data);
-                            iziTe(e.response.data.message);
-                        }else{
-                            logI(e);
+                            if (productoEncontrado) {
+                                iziTw('El Codigo ingresado ya existe!!!');
+                                Swal.close();
+                                return;
+                            }
+
+                            console.log(formData)
+
+                            // var res = await axios.post(route('api.productos.store'), formData, config);
+
+                            // this.cerrarModal();
+                            Swal.close();
+
+                        } else {
+
+                            this.cerrarModal();
+                            Swal.close()
+
                         }
 
+                    } catch (e) {
+                        notifyErrorApi(e);
+                        Swal.close()
                     }
+
                 },
-                async removeShortcut(option,index){
-
-                    logI('remove shortcut',option,index);
-
-                    let url = "{{route("api.users.remove_shortcut",auth()->user()->id)}}";
-
-                    url = url+"?option="+option.id;
-
-                    try {
-                        let res = await axios.get(url);
-
-                        iziTs(res.data.message);
-                        this.user.shortcuts.splice(index,1);
-                        logI(res);
-
-                    }catch (e) {
-
-
-                        if(e.response.data){
-                            logI(e.response.data);
-                            iziTe(e.response.data.message);
-                        }else{
-                            logI(e);
-                        }
-
-                    }
-                }
             }
         });
 

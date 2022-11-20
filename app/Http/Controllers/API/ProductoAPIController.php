@@ -54,6 +54,16 @@ class ProductoAPIController extends AppBaseController
         /** @var Producto $producto */
         $producto = Producto::create($input);
 
+        if ($request->hasFile('foto_producto')) {
+
+            if ($producto->getMedia('foto_producto')->isNotEmpty()) {
+                $producto->clearMediaCollection('foto_producto');
+            }
+
+            $producto->addMediaFromRequest('foto_producto')->toMediaCollection('foto_producto');
+
+        }
+
         return $this->sendResponse($producto->toArray(), 'Producto guardado exitosamente');
     }
 
