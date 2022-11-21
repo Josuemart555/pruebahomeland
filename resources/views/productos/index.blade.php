@@ -547,25 +547,12 @@
             computed: {
                 calcularPaginacion() {
                     const resultado = (this.productosLts2.length / 5)
+                    console.log(parseInt(resultado.toFixed()));
                     return parseInt(resultado.toFixed());
                 }
             },
         });
 
-        $(function() {
-
-            $( ".sortable" ).sortable({
-                update: function( event, ui ) {
-
-                    var  opciones=[];
-                    $(this).find('li').each(function (index,elemet) {
-                        opciones.push($(this).attr('id'));
-                    });
-
-                }
-            }).disableSelection();
-
-        });
     </script>
 
 @endpush
