@@ -33,6 +33,15 @@ class ProductoAPIController extends AppBaseController
         if ($request->get('limit')) {
             $query->limit($request->get('limit'));
         }
+        if ($request->get('offset')) {
+            $query->offset($request->get('offset'));
+        }
+        if ($request->get('orderable') === 'asc') {
+            $query->orderBy('created_at', 'asc');
+        }
+        if ($request->get('orderable') === 'desc') {
+            $query->orderBy('created_at', 'desc');
+        }
 
         $productos = $query->get();
 
@@ -107,6 +116,16 @@ class ProductoAPIController extends AppBaseController
 
         $producto->fill($request->all());
         $producto->save();
+
+        if ($request->hasFile('foto_producto')) {
+
+            if ($producto->getMedia('foto_producto')->isNotEmpty()) {
+                $producto->clearMediaCollection('foto_producto');
+            }
+
+            $producto->addMediaFromRequest('foto_producto')->toMediaCollection('foto_producto');
+
+        }
 
         return $this->sendResponse($producto->toArray(), 'Producto actualizado con éxito');
     }

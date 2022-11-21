@@ -98,13 +98,20 @@
                         <table class="table table-bordered table-sm table-striped mb-0">
                             <thead>
                             <tr>
+                                <th>Foto</th>
                                 <th>Codigo</th>
                                 <th>Nombre</th>
                                 <th>Cantidad</th>
                                 <th>Precio</th>
                                 <th>Fecha Ingreso</th>
                                 <th>Fecha Vencimiento</th>
-                                <th>Fecha Creación</th>
+                                <th>
+                                    <a href="#" @click.prevent="ordenarDescAsc()" >
+                                        Fecha Creación
+                                        <i v-show="!orderCreatedPrimeraVez" class="fa fa-arrow-up"></i>
+                                        <i v-show="orderCreatedPrimeraVez" class="fa fa-arrow-down"></i>
+                                    </a>
+                                </th>
                                 <th>Acciones</th>
                             </tr>
                             </thead>
@@ -113,13 +120,13 @@
                                 <td colspan="10" class="text-center">Ningún Registro agregado</td>
                             </tr>
                             <tr v-for="producto in productosLts">
-{{--                                <td>--}}
-{{--                                    <span v-if="producto.media_foto">--}}
-{{--                                        <div class="images" v-viewer="{movable: false, modal: true}">--}}
-{{--                                            <img class="img-thumbnail" :src="producto.media_foto.original_url" :key="producto.media_foto.original_url" style="height:90px;">--}}
-{{--                                        </div>--}}
-{{--                                    </span>--}}
-{{--                                </td>--}}
+                                <td>
+                                    <span v-if="producto.media_foto">
+                                        <div class="images" v-viewer="{movable: false, modal: true}">
+                                            <img class="img-thumbnail" :src="producto.media_foto.original_url" :key="producto.media_foto.original_url" style="height:90px;">
+                                        </div>
+                                    </span>
+                                </td>
                                 <td>
                                     <span v-text="producto.codigo"></span>
                                 </td>
@@ -151,6 +158,35 @@
                                 </td>
                             </tr>
                             </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colspan="10" >
+                                    <ul class="pagination ">
+
+                                        <li class="page-item" v-for="index in calcularPaginacion">
+                                            <a class="page-link" href="#" @click.prevent="paginacionSeleccionado(index)" >
+                                                <span v-text="index"></span>
+                                            </a>
+                                        </li>
+
+                                    </ul>
+                                </td>
+                            </tr>
+                            </tfoot>
+{{--                            <tfoot>--}}
+{{--                                <tr>--}}
+{{--                                    <ul class="pagination ">--}}
+{{--                                        <li class="page-item disabled" aria-disabled="true">--}}
+{{--                                            <span class="page-link">@lang('pagination.previous')</span>--}}
+{{--                                        </li>--}}
+
+{{--                                        <li class="page-item">--}}
+{{--                                            <a class="page-link" href="#"--}}
+{{--                                               rel="prev">@lang('pagination.previous')</a>--}}
+{{--                                        </li>--}}
+{{--                                    </ul>--}}
+{{--                                </tr>--}}
+{{--                            </tfoot>--}}
                         </table>
                     </div>
 
@@ -225,10 +261,15 @@
         const app = new Vue({
             el: '#vmProducto',
             created() {
+
                 this.getData();
+
+                this.getData2();
+                this.calcularPaginacion;
             },
             data: {
                 productosLts : [],
+                productosLts2 : [],
 
                 editedItem: {
                     id : 0,
@@ -238,6 +279,11 @@
                     id : 0,
                 },
 
+                orderCreated: null,
+                orderCreatedPrimeraVez: true,
+
+                numeroPaginacion: 0,
+
             },
             methods: {
                 async getData(){
@@ -245,11 +291,36 @@
 
                     try {
 
-                        var res = await axios.get(route('api.productos.index'));
+                        const data = {};
+                        data.orderable = this.orderCreated;
+                        data.limit = 5;
+                        data.offset = this.numeroPaginacion;
+
+                        console.log('data',data)
+
+                        var res = await axios.get(route('api.productos.index', data));
 
                         this.productosLts = res.data.data;
 
                         logI(res);
+
+                    } catch (e) {
+                        if(e.response.data){
+                            logI(e.response.data);
+                        }else{
+                            logI(e);
+                        }
+
+                    }
+                },
+                async getData2(){
+                    this.productosLts2= [];
+
+                    try {
+
+                        var res = await axios.get(route('api.productos.index'));
+
+                        this.productosLts2 = res.data.data;
 
                     } catch (e) {
                         if(e.response.data){
@@ -270,7 +341,7 @@
                 cerrarModal() {
                     setTimeout(() => {
                         this.editedItem = Object.assign({}, this.defaultItem);
-                        // this.inicializarFileInput(null, 'clear');
+                        this.inicializarFileInput(null, 'clear');
                         $("#modal-producto").modal('hide');
                     }, 300);
                 },
@@ -308,23 +379,21 @@
                     });
                     Swal.showLoading();
 
-                    let res = '';
+                    let res;
 
-                    var formData = new FormData();
+                    const data = this.editedItem;
 
-                    Object.entries(this.editedItem).map( ([campo, valor],i) => {
-                        if (valor){
-                            formData.append(campo,valor);
+                    const formData = new FormData();
+
+                    Object.entries(data).map(([campo, valor], i) => {
+                        if (valor) {
+                            formData.append(campo, valor);
                         }
                     });
 
-                    console.log(formData)
-
-                    const header = {
-                        headers: {
-                            'Content-Type': 'multipart/form-data'
-                        }
-                    };
+                    const config = {
+                        headers: {'content-type': 'multipart/form-data'}
+                    }
 
                     try {
 
@@ -338,9 +407,9 @@
                                 return;
                             }
 
-                            res = await axios.post(route('api.productos.store'), formData, header);
-
+                            res = await axios.post(route('api.productos.store'), formData, config);
                             this.cerrarModal();
+
                             Swal.close();
 
                         } else {
@@ -350,9 +419,9 @@
 
                             formData.append('_method', 'PATCH');
 
-                            res = await axios.post(route('api.productos.update', this.editedItem.id), formData, header);
-
+                            res = await axios.post(route('api.productos.update', this.editedItem.id), formData, config);
                             this.cerrarModal();
+
                             Swal.close()
 
                         }
@@ -372,8 +441,11 @@
                         this.editedItem.fecha_ingresa = this.formattedDate(this.editedItem.fecha_ingresa);
                         this.editedItem.fehca_vencimiento = this.formattedDate(this.editedItem.fehca_vencimiento);
 
-                        // this.inicializarFileInput(item.media_foto.original_url, 'destroy');
-                        this.inicializarFileInput('', 'destroy');
+                        if (item.media_foto) {
+                            this.inicializarFileInput(item.media_foto.original_url, 'destroy');
+                        } else {
+                            this.inicializarFileInput('', 'destroy');
+                        }
 
                         $("#modal-producto").modal('show');
                     }, 300);
@@ -403,8 +475,6 @@
                             let res = await axios.delete(route('api.productos.destroy',item.id))
                             Swal.close();
 
-                            logI(res.data);
-
                             iziTs(res.data.message);
                             await this.getData();
 
@@ -413,8 +483,6 @@
                             Swal.close();
                         }
                     }
-
-                    logI("Eliminar",confirm);
 
                 },
                 formatDate(inputDate) {
@@ -449,7 +517,39 @@
                 formattedDate(fecha) {
                     return moment(fecha, 'YYYY-MM-DD').format('yyyy-MM-D') ?? '';
                 },
-            }
+                async ordenarDescAsc() {
+
+                    if (this.orderCreatedPrimeraVez) {
+                        this.orderCreated = 'desc';
+                        this.orderCreatedPrimeraVez = false;
+                        await this.getData();
+                    } else {
+                        this.orderCreated = 'asc';
+                        this.orderCreatedPrimeraVez = true;
+                        await this.getData();
+                    }
+
+                },
+                async paginacionSeleccionado(index) {
+
+                    let resultado = 0;
+                    if (index == 1) {
+                        resultado = 0;
+                    } else {
+                        // el 5 es el total de resultados muestra que es por defecto
+                        resultado = (5 * (index - 1));
+                    }
+
+                    this.numeroPaginacion = resultado;
+                    await this.getData();
+                }
+            },
+            computed: {
+                calcularPaginacion() {
+                    const resultado = (this.productosLts2.length / 5)
+                    return parseInt(resultado.toFixed());
+                }
+            },
         });
 
         $(function() {

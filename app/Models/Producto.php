@@ -5,6 +5,8 @@ namespace App\Models;
 use Eloquent as Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * Class Producto
@@ -18,21 +20,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property string $fecha_ingresa
  * @property string $fehca_vencimiento
  */
-class Producto extends Model
+class Producto extends Model implements HasMedia
 {
-    use SoftDeletes;
-
-    use HasFactory;
+    use SoftDeletes, InteractsWithMedia, HasFactory;
 
     public $table = 'productos';
-    
+
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
 
 
     protected $dates = ['deleted_at'];
 
-
+    protected $appends = ['media_foto'];
 
     public $fillable = [
         'codigo',
@@ -75,5 +75,12 @@ class Producto extends Model
         'deleted_at' => 'nullable'
     ];
 
-    
+    /**
+     * @return \App\Models\Media
+     */
+    public function getMediaFotoAttribute()
+    {
+        return $this->getMedia('foto_producto')->first();
+    }
+
 }
