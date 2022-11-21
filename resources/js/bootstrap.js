@@ -8,6 +8,10 @@ try {
 
     window.Swal = require('sweetalert2');
 
+    window.moment = require('moment');
+    require('moment');
+    require('moment/locale/es.js');
+
 
 } catch (e) {}
 

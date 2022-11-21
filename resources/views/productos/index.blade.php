@@ -94,6 +94,66 @@
             <div class="card card-primary">
                 <div class="card-body">
 
+                    <div class="table-responsive mb-0">
+                        <table class="table table-bordered table-sm table-striped mb-0">
+                            <thead>
+                            <tr>
+                                <th>Codigo</th>
+                                <th>Nombre</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Fecha Ingreso</th>
+                                <th>Fecha Vencimiento</th>
+                                <th>Fecha Creación</th>
+                                <th>Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr v-if="productosLts.length == 0">
+                                <td colspan="10" class="text-center">Ningún Registro agregado</td>
+                            </tr>
+                            <tr v-for="producto in productosLts">
+{{--                                <td>--}}
+{{--                                    <span v-if="producto.media_foto">--}}
+{{--                                        <div class="images" v-viewer="{movable: false, modal: true}">--}}
+{{--                                            <img class="img-thumbnail" :src="producto.media_foto.original_url" :key="producto.media_foto.original_url" style="height:90px;">--}}
+{{--                                        </div>--}}
+{{--                                    </span>--}}
+{{--                                </td>--}}
+                                <td>
+                                    <span v-text="producto.codigo"></span>
+                                </td>
+                                <td>
+                                    <span v-text="producto.nombre"></span>
+                                </td>
+                                <td>
+                                    <span v-text="producto.cantidad"></span>
+                                </td>
+                                <td>
+                                    <span v-text="producto.precio"></span>
+                                </td>
+                                <td>
+                                    <span v-text="formatDate(producto.fecha_ingresa)"></span>
+                                </td>
+                                <td>
+                                    <span v-text="formatDate(producto.fehca_vencimiento)"></span>
+                                </td>
+                                <td>
+                                    <span v-text="formatDate(producto.created_at)"></span>
+                                </td>
+                                <td  class="text-nowrap">
+                                    <button type="button" @click="editarProducto(producto)" class='btn btn-outline-info btn-sm' v-tooltip="'Editar'" >
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button type="button" @click="eliminarProducto(producto)" class='btn btn-outline-danger btn-sm' v-tooltip="'ELiminar'" >
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </div>
             </div>
 
@@ -109,26 +169,6 @@
 
         $(document).ready(function() {
 
-            // $("#fecha_ingresa").change( function(){
-            //     s= $("#fecha_ingresa").val();
-            //     console.log(s)
-            //     var bits = s.split('/');
-            //     var d = new Date(bits[2] + '/' + bits[0] + '/' + bits[1]);
-            //     alert(d);
-            // });
-
-            // $('#fecha_ingresa').change(function() {
-            //     s= $("#fecha_ingresa").val();
-            //     var bits = s.split('-');
-            //     console.log(bits)
-            //     var d = new Date(bits[1] + '/' + bits[2] + '/' + bits[0]);
-            //     console.log(d);
-            //     if (d == 'Invalid Date') {
-            //         iziTw('La fehca ingresa es invalida!!!');
-            //         Swal.close();
-            //         return;
-            //     }
-            // });
 
         });
 
@@ -268,21 +308,23 @@
                     });
                     Swal.showLoading();
 
-                    const data = this.editedItem;
+                    let res = '';
 
-                    console.log(data)
+                    var formData = new FormData();
 
-                    const formData = new FormData();
-
-                    Object.entries(data).map(([campo, valor], i) => {
-                        if (valor) {
-                            formData.append(campo, valor);
+                    Object.entries(this.editedItem).map( ([campo, valor],i) => {
+                        if (valor){
+                            formData.append(campo,valor);
                         }
                     });
 
-                    const config = {
-                        headers: {'content-type': 'multipart/form-data'}
-                    }
+                    console.log(formData)
+
+                    const header = {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    };
 
                     try {
 
@@ -296,19 +338,27 @@
                                 return;
                             }
 
-                            console.log(formData)
+                            res = await axios.post(route('api.productos.store'), formData, header);
 
-                            // var res = await axios.post(route('api.productos.store'), formData, config);
-
-                            // this.cerrarModal();
+                            this.cerrarModal();
                             Swal.close();
 
                         } else {
+
+                            formData.delete('media_foto');
+                            formData.delete('media');
+
+                            formData.append('_method', 'PATCH');
+
+                            res = await axios.post(route('api.productos.update', this.editedItem.id), formData, header);
 
                             this.cerrarModal();
                             Swal.close()
 
                         }
+
+                        iziTs(res.data.message);
+                        await this.getData();
 
                     } catch (e) {
                         notifyErrorApi(e);
@@ -316,10 +366,93 @@
                     }
 
                 },
+                editarProducto(item) {
+                    setTimeout(() => {
+                        this.editedItem = Object.assign({}, item);
+                        this.editedItem.fecha_ingresa = this.formattedDate(this.editedItem.fecha_ingresa);
+                        this.editedItem.fehca_vencimiento = this.formattedDate(this.editedItem.fehca_vencimiento);
+
+                        // this.inicializarFileInput(item.media_foto.original_url, 'destroy');
+                        this.inicializarFileInput('', 'destroy');
+
+                        $("#modal-producto").modal('show');
+                    }, 300);
+                },
+                async eliminarProducto(item) {
+
+                    let confirm = await Swal.fire({
+                        title: '¿Estás seguro de eliminar?',
+                        text: "¡No podrás revertir esto!",
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Si, eliminar\n!'
+                    });
+
+                    if (confirm.isConfirmed) {
+                        try{
+
+                            Swal.fire({
+                                title: 'Espera por favor...',
+                                allowEscapeKey: false,
+                                allowOutsideClick: false,
+                                timerProgressBar: true,
+                            });
+                            Swal.showLoading();
+
+                            let res = await axios.delete(route('api.productos.destroy',item.id))
+                            Swal.close();
+
+                            logI(res.data);
+
+                            iziTs(res.data.message);
+                            await this.getData();
+
+                        }catch (e){
+                            notifyErrorApi(e);
+                            Swal.close();
+                        }
+                    }
+
+                    logI("Eliminar",confirm);
+
+                },
+                formatDate(inputDate) {
+                    let date, month, year;
+
+                    inputDate = new Date(inputDate);
+
+                    date = inputDate.getDate();
+                    month = inputDate.getMonth() + 1;
+                    year = inputDate.getFullYear();
+
+                    date = date
+                        .toString()
+                        .padStart(2, '0');
+
+                    month = month
+                        .toString()
+                        .padStart(2, '0');
+
+                    return `${date}/${month}/${year}`;
+                },
+                formatDate2(inputDate) {
+
+                    inputDate = new Date(inputDate);
+
+                    const format = 'yyyy-MM-dd';
+                    const locale = 'en-US';
+                    const formatteDate = formatDate(inputDate, format, locale);
+                    return formatteDate;
+
+                },
+                formattedDate(fecha) {
+                    return moment(fecha, 'YYYY-MM-DD').format('yyyy-MM-D') ?? '';
+                },
             }
         });
 
-        $(function(){
+        $(function() {
 
             $( ".sortable" ).sortable({
                 update: function( event, ui ) {
