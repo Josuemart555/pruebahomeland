@@ -195,6 +195,22 @@ class OptionsTableSeeder extends Seeder
                 'updated_at' => '2021-03-14 21:19:48',
                 'deleted_at' => NULL,
             ),
+            11 =>
+            array (
+                'id' => 12,
+                'option_id' => NULL,
+                'nombre' => 'Productos',
+                'ruta' => 'productos.index',
+                'descripcion' => NULL,
+                'icono_l' => 'fa-circle-notch',
+                'icono_r' => NULL,
+                'orden' => 0,
+                'color' => NULL,
+                'dev' => 0,
+                'created_at' => '2022-11-20 11:24:09',
+                'updated_at' => '2022-11-20 11:24:09',
+                'deleted_at' => NULL,
+            ),
         ));
 
         \DB::statement('SET FOREIGN_KEY_CHECKS=1');
